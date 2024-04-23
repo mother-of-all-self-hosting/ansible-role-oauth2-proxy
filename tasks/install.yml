@@ -1,0 +1,43 @@
+---
+
+- name: Ensure OAuth2-Proxy paths exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: 0750
+    owner: "{{ oauth2_proxy_uid }}"
+    group: "{{ oauth2_proxy_gid }}"
+  with_items:
+    - "{{ oauth2_proxy_base_path }}"
+
+- name: Ensure OAuth2-Proxy support files installed
+  ansible.builtin.template:
+    src: "{{ role_path }}/templates/{{ item }}.j2"
+    dest: "{{ oauth2_proxy_base_path }}/{{ item }}"
+    mode: 0640
+    owner: "{{ oauth2_proxy_uid }}"
+    group: "{{ oauth2_proxy_gid }}"
+  with_items:
+    - env
+    - labels
+
+- name: Ensure OAuth2-Proxy container image is pulled
+  community.docker.docker_image:
+    name: "{{ oauth2_proxy_container_image }}"
+    source: "{{ 'pull' if ansible_version.major > 2 or ansible_version.minor > 7 else omit }}"
+    force_source: "{{ oauth2_proxy_container_image_force_pull if ansible_version.major > 2 or ansible_version.minor >= 8 else omit }}"
+    force: "{{ omit if ansible_version.major > 2 or ansible_version.minor >= 8 else oauth2_proxy_container_image_force_pull }}"
+  register: result
+  retries: "{{ devture_playbook_help_container_retries_count }}"
+  delay: "{{ devture_playbook_help_container_retries_delay }}"
+  until: result is not failed
+
+- name: Ensure OAuth2-Proxy container network is created
+  community.general.docker_network:
+    name: "{{ oauth2_proxy_container_network }}"
+    driver: bridge
+
+- name: Ensure OAuth2-Proxy systemd service is present
+  ansible.builtin.template:
+    src: "{{ role_path }}/templates/systemd/oauth2-proxy.service.j2"
+    dest: "{{ devture_systemd_docker_base_systemd_path }}/{{ oauth2_proxy_identifier }}.service"

@@ -1,0 +1,25 @@
+---
+
+- name: Check existence of OAuth2-Proxy systemd service
+  ansible.builtin.stat:
+    path: "{{ devture_systemd_docker_base_systemd_path }}/{{ oauth2_proxy_identifier }}.service"
+  register: oauth2_proxy_service_stat
+
+- when: oauth2_proxy_service_stat.stat.exists | bool
+  block:
+    - name: Ensure OAuth2-Proxy systemd service is stopped
+      ansible.builtin.service:
+        name: "{{ oauth2_proxy_identifier }}"
+        state: stopped
+        enabled: false
+        daemon_reload: true
+
+    - name: Ensure OAuth2-Proxy systemd service does not exist
+      ansible.builtin.file:
+        path: "{{ devture_systemd_docker_base_systemd_path }}/{{ oauth2_proxy_identifier }}.service"
+        state: absent
+
+    - name: Ensure OAuth2-Proxy path doesn't exist
+      ansible.builtin.file:
+        path: "{{ oauth2_proxy_base_path }}"
+        state: absent

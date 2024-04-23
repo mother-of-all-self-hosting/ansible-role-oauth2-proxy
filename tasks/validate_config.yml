@@ -1,0 +1,17 @@
+---
+
+- name: Fail if required OAuth2-Proxy settings not defined
+  ansible.builtin.fail:
+    msg: >-
+      You need to define a required configuration setting (`{{ item.name }}`).
+  when: "item.when | bool and vars[item.name] == ''"
+  with_items:
+    - {'name': 'oauth2_proxy_identifier', 'when': true}
+    - {'name': 'oauth2_proxy_uid', 'when': true}
+    - {'name': 'oauth2_proxy_gid', 'when': true}
+    - {'name': 'oauth2_proxy_container_network', 'when': true}
+    - {'name': 'oauth2_proxy_environment_variable_cookie_secret', 'when': true}
+    - {'name': 'oauth2_proxy_environment_variable_provider', 'when': true}
+    - {'name': 'oauth2_proxy_environment_variable_client_id', 'when': true}
+    - {'name': 'oauth2_proxy_environment_variable_client_secret', 'when': true}
+    - {'name': 'oauth2_proxy_environment_variable_oidc_issuer_url', 'when': true}

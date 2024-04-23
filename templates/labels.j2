@@ -1,0 +1,12 @@
+{% if oauth2_proxy_container_labels_traefik_enabled %}
+traefik.enable=true
+
+{% if oauth2_proxy_container_labels_traefik_docker_network %}
+traefik.docker.network={{ oauth2_proxy_container_labels_traefik_docker_network }}
+{% endif %}
+
+traefik.http.services.{{ oauth2_proxy_identifier }}.loadbalancer.server.port={{ oauth2_proxy_container_process_http_port }}
+
+{{ oauth2_proxy_container_labels_additional_labels }}
+
+{% endif %}

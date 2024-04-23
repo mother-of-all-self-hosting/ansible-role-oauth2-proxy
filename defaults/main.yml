@@ -1,0 +1,156 @@
+---
+
+# Project source code URL: https://github.com/oauth2-proxy/oauth2-proxy
+
+oauth2_proxy_enabled: true
+
+oauth2_proxy_identifier: oauth2-proxy
+
+oauth2_proxy_uid: ''
+oauth2_proxy_gid: ''
+
+oauth2_proxy_version: v7.6.0
+
+oauth2_proxy_base_path: "/{{ oauth2_proxy_identifier }}"
+
+oauth2_proxy_container_image: "{{ oauth2_proxy_container_image_registry_prefix }}oauth2-proxy/oauth2-proxy:{{ oauth2_proxy_container_image_tag }}"
+oauth2_proxy_container_image_registry_prefix: quay.io/
+oauth2_proxy_container_image_tag: "{{ oauth2_proxy_version }}"
+oauth2_proxy_container_image_force_pull: "{{ oauth2_proxy_container_image.endswith(':latest') }}"
+
+# The base container network. It will be auto-created by this role if it doesn't exist already.
+oauth2_proxy_container_network: "{{ oauth2_proxy_identifier }}"
+
+# A list of additional container networks that the container would be connected to.
+# The role does not create these networks, so make sure they already exist.
+# Use this to expose this container to another reverse proxy, which runs in a different container network.
+oauth2_proxy_container_additional_networks: "{{ oauth2_proxy_container_additional_networks_auto + oauth2_proxy_container_additional_networks_custom }}"
+oauth2_proxy_container_additional_networks_auto: []
+oauth2_proxy_container_additional_networks_custom: []
+
+# Specifies the HTTP port that the container process listens on internally.
+oauth2_proxy_container_process_http_port: 4180
+
+# Specifies how the container publishes its HTTP port.
+#
+# Related to `oauth2_proxy_container_process_http_port` and `oauth2_proxy_environment_variable_http_address`
+#
+# Takes an "<ip>:<port>" value (e.g. "127.0.0.1:4180"), just a port number or an empty string to not expose.
+oauth2_proxy_container_http_bind_port: ''
+
+# oauth2_proxy_container_labels_traefik_enabled controls whether labels to assist a Traefik reverse-proxy will be attached to the container.
+# See `../templates/labels.j2` for details.
+#
+# To inject your own other container labels, see `oauth2_proxy_container_labels_additional_labels`.
+oauth2_proxy_container_labels_traefik_enabled: true
+oauth2_proxy_container_labels_traefik_docker_network: "{{ oauth2_proxy_container_network }}"
+oauth2_proxy_container_labels_traefik_entrypoints: web-secure
+oauth2_proxy_container_labels_traefik_tls_certResolver: default  # noqa var-naming
+
+# oauth2_proxy_container_labels_additional_labels contains a multiline string with additional labels to add to the container label file.
+# See `../templates/labels.j2` for details.
+#
+# Example:
+# oauth2_proxy_container_labels_additional_labels: |
+#   my.label=1
+#   another.label="here"
+oauth2_proxy_container_labels_additional_labels: ''
+
+# A list of additional "volumes" to mount in the container.
+#
+# See the `--mount` documentation for the `docker run` command.
+#
+# Example:
+# oauth2_proxy_container_additional_volumes:
+#   - type: bind
+#     src: /path/on/the/host
+#     dst: /data
+#   - type: bind
+#     src: /another-path/on/the/host
+#     dst: /read-only
+#     options: readonly
+oauth2_proxy_container_additional_volumes: []
+
+# A list of extra arguments to pass to the container
+oauth2_proxy_container_extra_arguments: []
+
+# Specifies if we're running behind a reverse-proxy
+oauth2_proxy_environment_variable_reverse_proxy: true
+
+# Specifies on which address to listen for HTTP requests inside the container
+oauth2_proxy_environment_variable_http_address: "0.0.0.0:{{ oauth2_proxy_container_process_http_port }}"
+
+# Specifies which email domains are whitelisted to use the system
+oauth2_proxy_environment_variable_email_domains: "*"
+
+# Specifies the seed string for secure cookies (optionally base64 encoded).
+#
+# Generate this with: `python -c 'import os,base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode())'`
+oauth2_proxy_environment_variable_cookie_secret: ''
+
+# Specifies which OAuth provider to use.
+# See:https://oauth2-proxy.github.io/oauth2-proxy/configuration/providers/
+oauth2_proxy_environment_variable_provider: ''
+
+# Specifies the name of the provider as seen in the "Sign In" button.
+# Leave empty to use the default value, which is provider-specific.
+oauth2_proxy_environment_variable_provider_display_name: ''
+
+# Specifies custom introduction HTML to use (beneath the logo, above the "Sign In" button).
+# Leave empty to use the default banner HTML.
+# Set to "-" to disable it.
+oauth2_proxy_environment_variable_banner: ''
+
+# Specifies custom footer HTML to use (beneath the log in card).
+# Leave empty to use the default footer HTML ("Secured with OAuth2 Proxy version XXX").
+# Set to "-" to disable it.
+oauth2_proxy_environment_variable_footer: ''
+
+# Specifies the path or a URL to an custom image for the sign_in page logo.
+# Leave empty to use the default default (OAuth2-Proxy) logo.
+# Set to "-" to disable the default (OAuth2-Proxy) logo.
+oauth2_proxy_environment_variable_custom_sign_in_logo: ''
+
+# Specifies the OIDC client id.
+oauth2_proxy_environment_variable_client_id: ''
+
+# Specifies the OIDC client secret.
+oauth2_proxy_environment_variable_client_secret: ''
+
+# Specifies the OpenID Connect issuer URL.
+oauth2_proxy_environment_variable_oidc_issuer_url: ''
+
+# Specifies the OAuth Redirect URL
+oauth2_proxy_environment_variable_redirect_url: ''
+
+# Specifies whether `/oauth/auth` responses (used for auth_request/ForwardAuth)
+# would return HTTP headers (e.g. `X-Auth-Request-Email`, `X-Auth-Request-Groups`, `X-Auth-Request-Preferred-Username`, `X-Auth-Request-User`).
+#
+# You can use OAuth2-Proxy as a ForwardAuth middleware endpoint even without enabling this,
+# but if you'd like to pass these headers to the application, then you need:
+# - this enabled
+# - to whitelist the headers you'd like to pass using `forwardAuth.authResponseHeaders` middleware configuration
+oauth2_proxy_environment_variable_set_xauthrequest: true
+
+# Specifies the code-challenge method.
+# Certain providers may require a specific method to be used.
+oauth2_proxy_environment_variable_code_challenge_method: ''
+
+# Restrict logins to users with a given role.
+# Only works with the keycloak-oidc provider.
+#
+# Example:
+# oauth2_proxy_environment_variable_allowed_roles: app:LoginAccess
+oauth2_proxy_environment_variable_allowed_roles: ''
+
+# Restrict logins to members of a given group.
+oauth2_proxy_environment_variable_allowed_groups: ''
+
+# Additional environment variables.
+oauth2_proxy_environment_variables_additional_variables: ''
+
+# List of systemd services that the OAuth2-Proxy service depends on
+oauth2_proxy_systemd_required_services_list: "{{ oauth2_proxy_systemd_required_systemd_services_list_default + oauth2_proxy_systemd_required_systemd_services_list_auto + oauth2_proxy_systemd_required_systemd_services_list_custom }}"
+oauth2_proxy_systemd_required_systemd_services_list_default: ['docker.service']
+oauth2_proxy_systemd_required_systemd_services_list_auto: []
+oauth2_proxy_systemd_required_systemd_services_list_custom: []
