@@ -45,6 +45,7 @@ oauth2_proxy_container_http_bind_port: ''
 oauth2_proxy_container_labels_traefik_enabled: true
 oauth2_proxy_container_labels_traefik_docker_network: "{{ oauth2_proxy_container_network }}"
 oauth2_proxy_container_labels_traefik_entrypoints: web-secure
+oauth2_proxy_container_labels_traefik_tls: "{{ oauth2_proxy_container_labels_traefik_entrypoints != 'web' }}"
 oauth2_proxy_container_labels_traefik_tls_certResolver: default  # noqa var-naming
 
 # oauth2_proxy_container_labels_additional_labels contains a multiline string with additional labels to add to the container label file.
