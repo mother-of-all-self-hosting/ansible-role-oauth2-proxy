@@ -11,6 +11,9 @@ Description=OAuth2-proxy ({{ oauth2_proxy_identifier }})
 Requires={{ service }}
 After={{ service }}
 {% endfor %}
+{% for service in oauth2_proxy_systemd_wanted_services_list %}
+Wants={{ service }}
+{% endfor %}
 DefaultDependencies=no
 
 [Service]
