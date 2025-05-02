@@ -81,6 +81,12 @@ oauth2_proxy_container_additional_volumes: []
 # A list of extra arguments to pass to the container
 oauth2_proxy_container_extra_arguments: []
 
+# List of systemd services that the OAuth2-Proxy service depends on
+oauth2_proxy_systemd_required_services_list: "{{ oauth2_proxy_systemd_required_services_list_default + oauth2_proxy_systemd_required_services_list_auto + oauth2_proxy_systemd_required_services_list_custom }}"
+oauth2_proxy_systemd_required_services_list_default: "{{ [devture_systemd_docker_base_docker_service_name] if devture_systemd_docker_base_docker_service_name else [] }}"
+oauth2_proxy_systemd_required_services_list_auto: []
+oauth2_proxy_systemd_required_services_list_custom: []
+
 # Specifies if we're running behind a reverse-proxy
 oauth2_proxy_environment_variable_reverse_proxy: true
 
@@ -155,9 +161,3 @@ oauth2_proxy_environment_variable_allowed_groups: ''
 
 # Additional environment variables.
 oauth2_proxy_environment_variables_additional_variables: ''
-
-# List of systemd services that the OAuth2-Proxy service depends on
-oauth2_proxy_systemd_required_services_list: "{{ oauth2_proxy_systemd_required_systemd_services_list_default + oauth2_proxy_systemd_required_systemd_services_list_auto + oauth2_proxy_systemd_required_systemd_services_list_custom }}"
-oauth2_proxy_systemd_required_systemd_services_list_default: ['docker.service']
-oauth2_proxy_systemd_required_systemd_services_list_auto: []
-oauth2_proxy_systemd_required_systemd_services_list_custom: []
