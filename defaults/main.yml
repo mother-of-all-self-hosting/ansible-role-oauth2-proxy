@@ -18,8 +18,10 @@ oauth2_proxy_version: v7.6.0
 oauth2_proxy_base_path: "/{{ oauth2_proxy_identifier }}"
 
 oauth2_proxy_container_image: "{{ oauth2_proxy_container_image_registry_prefix }}oauth2-proxy/oauth2-proxy:{{ oauth2_proxy_container_image_tag }}"
-oauth2_proxy_container_image_registry_prefix: quay.io/
 oauth2_proxy_container_image_tag: "{{ oauth2_proxy_version }}"
+oauth2_proxy_container_image_registry_prefix: "{{ oauth2_proxy_container_image_registry_prefix_upstream }}"
+oauth2_proxy_container_image_registry_prefix_upstream: "{{ oauth2_proxy_container_image_registry_prefix_upstream_default }}"
+oauth2_proxy_container_image_registry_prefix_upstream_default: quay.io/
 oauth2_proxy_container_image_force_pull: "{{ oauth2_proxy_container_image.endswith(':latest') }}"
 
 # The base container network. It will be auto-created by this role if it doesn't exist already.
