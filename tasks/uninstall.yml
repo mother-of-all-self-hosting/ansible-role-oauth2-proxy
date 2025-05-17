@@ -23,7 +23,7 @@
         path: "{{ devture_systemd_docker_base_systemd_path }}/{{ oauth2_proxy_identifier }}.service"
         state: absent
 
-    - name: Ensure OAuth2-Proxy path doesn't exist
+    - name: Ensure OAuth2-Proxy path does not exist
       ansible.builtin.file:
         path: "{{ oauth2_proxy_base_path }}"
         state: absent
