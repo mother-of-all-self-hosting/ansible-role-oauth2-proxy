@@ -4,7 +4,7 @@
 
 ---
 
-- name: Ensure OAuth2-Proxy paths exist
+- name: Ensure OAuth2-Proxy path exists
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
@@ -47,3 +47,4 @@
   ansible.builtin.template:
     src: "{{ role_path }}/templates/systemd/oauth2-proxy.service.j2"
     dest: "{{ devture_systemd_docker_base_systemd_path }}/{{ oauth2_proxy_identifier }}.service"
+    mode: 0644
