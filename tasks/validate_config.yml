@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 ---
-
 - name: (Deprecation) Catch and report renamed settings
   ansible.builtin.fail:
     msg: >-
@@ -11,9 +10,9 @@
       Please change your configuration to rename the variable (`{{ item.old }}` -> `{{ item.new }}`).
   when: "item.old in vars"
   with_items:
-    - {'old': 'oauth2_proxy_systemd_required_systemd_services_list_default', 'new': 'oauth2_proxy_systemd_required_services_list_default'}
-    - {'old': 'oauth2_proxy_systemd_required_systemd_services_list_auto', 'new': 'oauth2_proxy_systemd_required_services_list_auto'}
-    - {'old': 'oauth2_proxy_systemd_required_systemd_services_list_custom', 'new': 'oauth2_proxy_systemd_required_services_list_custom'}
+    - { "old": "oauth2_proxy_systemd_required_systemd_services_list_default", "new": "oauth2_proxy_systemd_required_services_list_default" }
+    - { "old": "oauth2_proxy_systemd_required_systemd_services_list_auto", "new": "oauth2_proxy_systemd_required_services_list_auto" }
+    - { "old": "oauth2_proxy_systemd_required_systemd_services_list_custom", "new": "oauth2_proxy_systemd_required_services_list_custom" }
 
 - name: Fail if required OAuth2-Proxy settings not defined
   ansible.builtin.fail:
@@ -21,12 +20,12 @@
       You need to define a required configuration setting (`{{ item.name }}`).
   when: "item.when | bool and vars[item.name] == ''"
   with_items:
-    - {'name': 'oauth2_proxy_identifier', 'when': true}
-    - {'name': 'oauth2_proxy_uid', 'when': true}
-    - {'name': 'oauth2_proxy_gid', 'when': true}
-    - {'name': 'oauth2_proxy_container_network', 'when': true}
-    - {'name': 'oauth2_proxy_environment_variable_cookie_secret', 'when': true}
-    - {'name': 'oauth2_proxy_environment_variable_provider', 'when': true}
-    - {'name': 'oauth2_proxy_environment_variable_client_id', 'when': true}
-    - {'name': 'oauth2_proxy_environment_variable_client_secret', 'when': true}
-    - {'name': 'oauth2_proxy_environment_variable_oidc_issuer_url', 'when': true}
+    - { "name": "oauth2_proxy_identifier", "when": true }
+    - { "name": "oauth2_proxy_uid", "when": true }
+    - { "name": "oauth2_proxy_gid", "when": true }
+    - { "name": "oauth2_proxy_container_network", "when": true }
+    - { "name": "oauth2_proxy_environment_variable_cookie_secret", "when": true }
+    - { "name": "oauth2_proxy_environment_variable_provider", "when": true }
+    - { "name": "oauth2_proxy_environment_variable_client_id", "when": true }
+    - { "name": "oauth2_proxy_environment_variable_client_secret", "when": true }
+    - { "name": "oauth2_proxy_environment_variable_oidc_issuer_url", "when": true }
