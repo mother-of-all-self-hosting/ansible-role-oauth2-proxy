@@ -4,6 +4,7 @@
 
 ---
 - name: Perform OAuth2-Proxy installation tasks
+  when: oauth2_proxy_enabled | bool
   tags:
     - setup-all
     - setup-oauth2-proxy
@@ -11,17 +12,15 @@
     - install-oauth2-proxy
   block:
     - name: Validate OAuth2-Proxy configuration
-      when: oauth2_proxy_enabled | bool
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/validate_config.yml"
     - name: Install OAuth2-Proxy
-      when: oauth2_proxy_enabled | bool
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/install.yml"
 
 - name: Perform OAuth2-Proxy uninstallation tasks
+  when: not oauth2_proxy_enabled | bool
   tags:
     - setup-all
     - setup-oauth2-proxy
   block:
     - name: Uninstall OAuth2-Proxy
-      when: not oauth2_proxy_enabled | bool
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/uninstall.yml"
