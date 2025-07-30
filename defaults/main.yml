@@ -11,7 +11,7 @@ oauth2_proxy_identifier: oauth2-proxy
 oauth2_proxy_base_path: "/{{ oauth2_proxy_identifier }}"
 
 # renovate: datasource=docker depName=quay.io/oauth2-proxy/oauth2-proxy versioning=semver
-oauth2_proxy_version: v7.6.0
+oauth2_proxy_version: v7.11.0
 
 oauth2_proxy_uid: ''
 oauth2_proxy_gid: ''
