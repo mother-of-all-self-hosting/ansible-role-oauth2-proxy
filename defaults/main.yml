@@ -81,7 +81,10 @@ oauth2_proxy_systemd_required_services_list_auto: []
 oauth2_proxy_systemd_required_services_list_custom: []
 
 # List of systemd services that the OAuth2-Proxy systemd service wants
-oauth2_systemd_wanted_services_list: []
+oauth2_proxy_systemd_wanted_services_list: "{{ oauth2_proxy_systemd_wanted_services_list_default + oauth2_proxy_systemd_wanted_services_list_auto + oauth2_proxy_systemd_wanted_services_list_custom }}"
+oauth2_proxy_systemd_wanted_services_list_default: []
+oauth2_proxy_systemd_wanted_services_list_auto: []
+oauth2_proxy_systemd_wanted_services_list_custom: []
 
 # Specifies if we're running behind a reverse-proxy
 oauth2_proxy_environment_variable_reverse_proxy: true
