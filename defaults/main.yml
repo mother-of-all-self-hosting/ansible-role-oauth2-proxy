@@ -86,6 +86,9 @@ oauth2_proxy_systemd_wanted_services_list_default: []
 oauth2_proxy_systemd_wanted_services_list_auto: []
 oauth2_proxy_systemd_wanted_services_list_custom: []
 
+# Specify the timezone
+oauth2_proxy_environment_variables_tz: UTC
+
 # Specifies if we're running behind a reverse-proxy
 oauth2_proxy_environment_variable_reverse_proxy: true
 
