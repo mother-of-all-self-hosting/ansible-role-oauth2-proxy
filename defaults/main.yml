@@ -72,7 +72,9 @@ oauth2_proxy_container_labels_traefik_tls_certResolver: default  # noqa var-nami
 oauth2_proxy_container_labels_additional_labels: ''
 
 # A list of extra arguments to pass to the container
-oauth2_proxy_container_extra_arguments: []
+oauth2_proxy_container_extra_arguments: "{{ oauth2_proxy_container_extra_arguments_auto + oauth2_proxy_container_extra_arguments_custom }}"
+oauth2_proxy_container_extra_arguments_auto: []
+oauth2_proxy_container_extra_arguments_custom: []
 
 # List of systemd services that the OAuth2-Proxy service depends on
 oauth2_proxy_systemd_required_services_list: "{{ oauth2_proxy_systemd_required_services_list_default + oauth2_proxy_systemd_required_services_list_auto + oauth2_proxy_systemd_required_services_list_custom }}"
