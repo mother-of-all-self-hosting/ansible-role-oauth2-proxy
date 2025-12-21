@@ -74,7 +74,7 @@ oauth2_proxy_container_labels_additional_labels: "{{ oauth2_proxy_container_labe
 oauth2_proxy_container_labels_additional_labels_auto: {}
 oauth2_proxy_container_labels_additional_labels_custom: {}
 
-# A list of extra arguments to pass to the container
+# A list of extra arguments to pass to the container (`docker create` command)
 oauth2_proxy_container_extra_arguments: "{{ oauth2_proxy_container_extra_arguments_auto + oauth2_proxy_container_extra_arguments_custom }}"
 oauth2_proxy_container_extra_arguments_auto: []
 oauth2_proxy_container_extra_arguments_custom: []
