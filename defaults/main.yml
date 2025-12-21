@@ -13,8 +13,8 @@ oauth2_proxy_base_path: "/{{ oauth2_proxy_identifier }}"
 # renovate: datasource=docker depName=quay.io/oauth2-proxy/oauth2-proxy versioning=semver
 oauth2_proxy_version: v7.13.0
 
-oauth2_proxy_uid: ''
-oauth2_proxy_gid: ''
+oauth2_proxy_uid: ""
+oauth2_proxy_gid: ""
 
 oauth2_proxy_container_image: "{{ oauth2_proxy_container_image_registry_prefix }}oauth2-proxy/oauth2-proxy:{{ oauth2_proxy_container_image_tag }}"
 oauth2_proxy_container_image_tag: "{{ oauth2_proxy_version }}"
@@ -28,7 +28,7 @@ oauth2_proxy_container_image_force_pull: "{{ oauth2_proxy_container_image.endswi
 # Related to `oauth2_proxy_container_process_http_port` and `oauth2_proxy_environment_variable_http_address`
 #
 # Takes an "<ip>:<port>" value (e.g. "127.0.0.1:4180"), just a port number or an empty string to not expose.
-oauth2_proxy_container_http_bind_port: ''
+oauth2_proxy_container_http_bind_port: ""
 
 # The base container network. It will be auto-created by this role if it doesn't exist already.
 oauth2_proxy_container_network: "{{ oauth2_proxy_identifier }}"
@@ -106,42 +106,42 @@ oauth2_proxy_environment_variable_email_domains: "*"
 # Specifies the seed string for secure cookies (optionally base64 encoded).
 #
 # Generate this with: `python -c 'import os,base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode())'`
-oauth2_proxy_environment_variable_cookie_secret: ''
+oauth2_proxy_environment_variable_cookie_secret: ""
 
 # Specifies which OAuth provider to use.
 # See:https://oauth2-proxy.github.io/oauth2-proxy/configuration/providers/
-oauth2_proxy_environment_variable_provider: ''
+oauth2_proxy_environment_variable_provider: ""
 
 # Specifies the name of the provider as seen in the "Sign In" button.
 # Leave empty to use the default value, which is provider-specific.
-oauth2_proxy_environment_variable_provider_display_name: ''
+oauth2_proxy_environment_variable_provider_display_name: ""
 
 # Specifies custom introduction HTML to use (beneath the logo, above the "Sign In" button).
 # Leave empty to use the default banner HTML.
 # Set to "-" to disable it.
-oauth2_proxy_environment_variable_banner: ''
+oauth2_proxy_environment_variable_banner: ""
 
 # Specifies custom footer HTML to use (beneath the log in card).
 # Leave empty to use the default footer HTML ("Secured with OAuth2 Proxy version XXX").
 # Set to "-" to disable it.
-oauth2_proxy_environment_variable_footer: ''
+oauth2_proxy_environment_variable_footer: ""
 
 # Specifies the path or a URL to an custom image for the sign_in page logo.
 # Leave empty to use the default default (OAuth2-Proxy) logo.
 # Set to "-" to disable the default (OAuth2-Proxy) logo.
-oauth2_proxy_environment_variable_custom_sign_in_logo: ''
+oauth2_proxy_environment_variable_custom_sign_in_logo: ""
 
 # Specifies the OIDC client id.
-oauth2_proxy_environment_variable_client_id: ''
+oauth2_proxy_environment_variable_client_id: ""
 
 # Specifies the OIDC client secret.
-oauth2_proxy_environment_variable_client_secret: ''
+oauth2_proxy_environment_variable_client_secret: ""
 
 # Specifies the OpenID Connect issuer URL.
-oauth2_proxy_environment_variable_oidc_issuer_url: ''
+oauth2_proxy_environment_variable_oidc_issuer_url: ""
 
 # Specifies the OAuth Redirect URL
-oauth2_proxy_environment_variable_redirect_url: ''
+oauth2_proxy_environment_variable_redirect_url: ""
 
 # Specifies whether `/oauth/auth` responses (used for auth_request/ForwardAuth)
 # would return HTTP headers (e.g. `X-Auth-Request-Email`, `X-Auth-Request-Groups`, `X-Auth-Request-Preferred-Username`, `X-Auth-Request-User`).
@@ -154,17 +154,17 @@ oauth2_proxy_environment_variable_set_xauthrequest: true
 
 # Specifies the code-challenge method.
 # Certain providers may require a specific method to be used.
-oauth2_proxy_environment_variable_code_challenge_method: ''
+oauth2_proxy_environment_variable_code_challenge_method: ""
 
 # Restrict logins to users with a given role.
 # Only works with the keycloak-oidc provider.
 #
 # Example:
 # oauth2_proxy_environment_variable_allowed_roles: app:LoginAccess
-oauth2_proxy_environment_variable_allowed_roles: ''
+oauth2_proxy_environment_variable_allowed_roles: ""
 
 # Restrict logins to members of a given group.
-oauth2_proxy_environment_variable_allowed_groups: ''
+oauth2_proxy_environment_variable_allowed_groups: ""
 
 # Additional environment variables.
-oauth2_proxy_environment_variables_additional_variables: ''
+oauth2_proxy_environment_variables_additional_variables: ""
