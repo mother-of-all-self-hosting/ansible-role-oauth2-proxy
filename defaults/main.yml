@@ -68,11 +68,11 @@ oauth2_proxy_container_labels_traefik_tls_certResolver: default  # noqa var-nami
 #
 # Example:
 # oauth2_proxy_container_labels_additional_labels_custom: |
-#   my.label=1
-#   another.label="here"
-oauth2_proxy_container_labels_additional_labels: "{{ oauth2_proxy_container_labels_additional_labels_auto | combine(oauth2_proxy_container_labels_additional_labels_custom) }}"
-oauth2_proxy_container_labels_additional_labels_auto: {}
-oauth2_proxy_container_labels_additional_labels_custom: {}
+#   - my.label=1
+#   - another.label="here"
+oauth2_proxy_container_labels_additional_labels: "{{ oauth2_proxy_container_labels_additional_labels_auto + oauth2_proxy_container_labels_additional_labels_custom }}"
+oauth2_proxy_container_labels_additional_labels_auto: []
+oauth2_proxy_container_labels_additional_labels_custom: []
 
 # A list of extra arguments to pass to the container (`docker create` command)
 oauth2_proxy_container_extra_arguments: "{{ oauth2_proxy_container_extra_arguments_auto + oauth2_proxy_container_extra_arguments_custom }}"
