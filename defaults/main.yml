@@ -23,17 +23,15 @@ oauth2_proxy_container_image_registry_prefix_upstream: "{{ oauth2_proxy_containe
 oauth2_proxy_container_image_registry_prefix_upstream_default: quay.io/
 oauth2_proxy_container_image_force_pull: "{{ oauth2_proxy_container_image.endswith(':latest') }}"
 
-# Specifies how the container publishes its HTTP port.
+# Controls whether the container exposes its HTTP port (tcp/4180 in the container).
 #
-# Related to `oauth2_proxy_container_process_http_port` and `oauth2_proxy_environment_variable_http_address`
-#
-# Takes an "<ip>:<port>" value (e.g. "127.0.0.1:4180"), just a port number or an empty string to not expose.
+# Takes an "<ip>:<port>" or "<port>" value (e.g. "127.0.0.1:2586"), or empty string to not expose.
 oauth2_proxy_container_http_bind_port: ""
 
 # The base container network. It will be auto-created by this role if it doesn't exist already.
 oauth2_proxy_container_network: "{{ oauth2_proxy_identifier }}"
 
-# Specifies the HTTP port that the container process listens on internally.
+# The port number in the container
 oauth2_proxy_container_process_http_port: 4180
 
 # A list of additional container networks that the container would be connected to.
