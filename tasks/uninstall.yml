@@ -29,6 +29,7 @@
       community.docker.docker_network:
         name: "{{ oauth2_proxy_container_network }}"
         state: absent
+      register: oauth2_proxy_network_deletion_result
 
     - name: Ensure OAuth2-Proxy container network does not exist via ansible.builtin.command
       when: devture_systemd_docker_base_container_network_creation_method == 'command'
@@ -36,8 +37,8 @@
         cmd: >-
           {{ devture_systemd_docker_base_host_command_docker }} network rm
           {{ oauth2_proxy_container_network }}
-      register: network_deletion_result
-      changed_when: oauth2_proxy_container_network in network_deletion_result.stdout
+      register: oauth2_proxy_network_deletion_result
+      changed_when: oauth2_proxy_container_network in oauth2_proxy_network_deletion_result.stdout
 
     - name: Ensure OAuth2-Proxy path does not exist
       ansible.builtin.file:
