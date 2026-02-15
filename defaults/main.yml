@@ -26,6 +26,9 @@ oauth2_proxy_container_image_force_pull: "{{ oauth2_proxy_container_image.endswi
 # The base container network. It will be auto-created by this role if it doesn't exist already.
 oauth2_proxy_container_network: "{{ oauth2_proxy_identifier }}"
 
+# Control if the container network is deleted on uninstalling.
+oauth2_proxy_container_network_deletion_enabled: true
+
 # Specify how the container publishes its HTTP port (as defined by `oauth2_proxy_container_process_http_port`).
 #
 # Takes an "<ip>:<port>" or "<port>" value (e.g. "127.0.0.1:2586"), or empty string to not expose.
