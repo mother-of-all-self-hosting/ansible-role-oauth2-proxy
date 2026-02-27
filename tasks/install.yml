@@ -23,6 +23,7 @@
   with_items:
     - env
     - labels
+  register: oauth2_proxy_support_files_result
 
 - name: Ensure OAuth2-Proxy container image is pulled via community.docker.docker_image
   when: devture_systemd_docker_base_container_image_pull_method == 'ansible-module'
@@ -31,20 +32,20 @@
     source: "{{ 'pull' if ansible_version.major > 2 or ansible_version.minor > 7 else omit }}"
     force_source: "{{ oauth2_proxy_container_image_force_pull if ansible_version.major > 2 or ansible_version.minor >= 8 else omit }}"
     force: "{{ omit if ansible_version.major > 2 or ansible_version.minor >= 8 else oauth2_proxy_container_image_force_pull }}"
-  register: result
+  register: oauth2_proxy_container_image_pull_result
   retries: "{{ devture_playbook_help_container_retries_count }}"
   delay: "{{ devture_playbook_help_container_retries_delay }}"
-  until: result is not failed
+  until: oauth2_proxy_container_image_pull_result is not failed
 
 - name: Ensure OAuth2-Proxy container image is pulled via ansible.builtin.command
   when: devture_systemd_docker_base_container_image_pull_method == 'command'
   ansible.builtin.command:
     cmd: "{{ devture_systemd_docker_base_host_command_docker }} pull {{ oauth2_proxy_container_image }}"
-  register: result
+  register: oauth2_proxy_container_image_pull_result
   retries: "{{ devture_playbook_help_container_retries_count }}"
   delay: "{{ devture_playbook_help_container_retries_delay }}"
-  until: result is not failed
-  changed_when: "'Downloaded newer image' in result.stdout"
+  until: oauth2_proxy_container_image_pull_result is not failed
+  changed_when: "'Downloaded newer image' in oauth2_proxy_container_image_pull_result.stdout"
 
 - name: Ensure OAuth2-Proxy container network is created via community.docker.docker_network
   when: devture_systemd_docker_base_container_network_creation_method == 'ansible-module'
@@ -72,3 +73,13 @@
     src: "{{ role_path }}/templates/systemd/oauth2-proxy.service.j2"
     dest: "{{ devture_systemd_docker_base_systemd_path }}/{{ oauth2_proxy_identifier }}.service"
     mode: "0644"
+  register: oauth2_proxy_systemd_service_result
+
+- name: Determine whether OAuth2-Proxy needs a restart
+  ansible.builtin.set_fact:
+    oauth2_proxy_restart_necessary: >-
+      {{
+        oauth2_proxy_support_files_result.changed | default(false)
+        or oauth2_proxy_systemd_service_result.changed | default(false)
+        or oauth2_proxy_container_image_pull_result.changed | default(false)
+      }}
