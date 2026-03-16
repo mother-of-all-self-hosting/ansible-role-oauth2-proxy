@@ -10,6 +10,7 @@
       Please change your configuration to rename the variable (`{{ item.old }}` -> `{{ item.new }}`).
   when: "lookup('ansible.builtin.varnames', ('^' + item.old + '$'), wantlist=True) | length > 0"
   with_items:
+    - { "old": "oauth2_proxy_container_http_bind_port", "new": "oauth2_proxy_container_http_host_bind_port" }
     - { "old": "oauth2_proxy_systemd_required_systemd_services_list_default", "new": "oauth2_proxy_systemd_required_services_list_default" }
     - { "old": "oauth2_proxy_systemd_required_systemd_services_list_auto", "new": "oauth2_proxy_systemd_required_services_list_auto" }
     - { "old": "oauth2_proxy_systemd_required_systemd_services_list_custom", "new": "oauth2_proxy_systemd_required_services_list_custom" }

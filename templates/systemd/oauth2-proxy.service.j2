@@ -28,8 +28,8 @@ ExecStartPre={{ devture_systemd_docker_base_host_command_docker }} create \
       --cap-drop=ALL \
       --read-only \
       --network={{ oauth2_proxy_container_network }} \
-      {% if oauth2_proxy_container_http_bind_port %}
-      -p {{ oauth2_proxy_container_http_bind_port }}:{{ oauth2_proxy_environment_variable_http_address }} \
+      {% if oauth2_proxy_container_http_host_bind_port %}
+      -p {{ oauth2_proxy_container_http_host_bind_port }}:{{ oauth2_proxy_environment_variable_http_address }} \
       {% endif %}
       --env-file={{ oauth2_proxy_base_path }}/env \
       --label-file={{ oauth2_proxy_base_path }}/labels \
