@@ -14,6 +14,7 @@
     - { "old": "oauth2_proxy_systemd_required_systemd_services_list_default", "new": "oauth2_proxy_systemd_required_services_list_default" }
     - { "old": "oauth2_proxy_systemd_required_systemd_services_list_auto", "new": "oauth2_proxy_systemd_required_services_list_auto" }
     - { "old": "oauth2_proxy_systemd_required_systemd_services_list_custom", "new": "oauth2_proxy_systemd_required_services_list_custom" }
+    - { "old": "oauth2_container_image_force_pull", "new": "<removed> (the new community.docker.docker_image_pull module handles this natively)" }
 
 - name: Fail if required OAuth2-Proxy settings not defined
   ansible.builtin.fail:
