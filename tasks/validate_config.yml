@@ -19,15 +19,14 @@
 - name: Fail if required OAuth2-Proxy settings not defined
   ansible.builtin.fail:
     msg: >-
-      You need to define a required configuration setting (`{{ item.name }}`).
-  when: "item.when | bool and lookup('vars', item.name, default='') | string | length == 0"
+      You need to define a required configuration setting (`{{ item }}`).
+  when: "lookup('vars', item, default='') | string | length == 0"
   with_items:
-    - { "name": "oauth2_proxy_identifier", "when": true }
-    - { "name": "oauth2_proxy_uid", "when": true }
-    - { "name": "oauth2_proxy_gid", "when": true }
-    - { "name": "oauth2_proxy_container_network", "when": true }
-    - { "name": "oauth2_proxy_environment_variable_cookie_secret", "when": true }
-    - { "name": "oauth2_proxy_environment_variable_provider", "when": true }
-    - { "name": "oauth2_proxy_environment_variable_client_id", "when": true }
-    - { "name": "oauth2_proxy_environment_variable_client_secret", "when": true }
-    - { "name": "oauth2_proxy_environment_variable_oidc_issuer_url", "when": true }
+    - oauth2_proxy_uid
+    - oauth2_proxy_gid
+    - oauth2_proxy_container_network
+    - oauth2_proxy_environment_variable_cookie_secret
+    - oauth2_proxy_environment_variable_provider
+    - oauth2_proxy_environment_variable_client_id
+    - oauth2_proxy_environment_variable_client_secret
+    - oauth2_proxy_environment_variable_oidc_issuer_url
