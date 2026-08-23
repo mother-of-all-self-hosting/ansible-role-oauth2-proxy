@@ -29,7 +29,7 @@ ExecStartPre={{ devture_systemd_docker_base_host_command_docker }} create \
       --read-only \
       --network={{ oauth2_proxy_container_network }} \
       {% if oauth2_proxy_container_http_host_bind_port %}
-      -p {{ oauth2_proxy_container_http_host_bind_port }}:{{ oauth2_proxy_environment_variable_http_address }} \
+      -p {{ oauth2_proxy_container_http_host_bind_port }}:{{ oauth2_proxy_container_process_http_port }} \
       {% endif %}
       --env-file={{ oauth2_proxy_base_path }}/env \
       --label-file={{ oauth2_proxy_base_path }}/labels \
