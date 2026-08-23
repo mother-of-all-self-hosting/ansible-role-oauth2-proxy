@@ -1,0 +1,117 @@
+# SPDX-FileCopyrightText: 2026 Slavi Pantaleev
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+---
+- name: Include roles for OAuth2-Proxy Molecule tests
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Load the OAuth2-Proxy Molecule test credentials
+      ansible.builtin.include_vars:
+        file: "{{ lookup('env', 'MOLECULE_SCENARIO_DIRECTORY') }}/vars/credentials.yml"
+
+    - name: Include roles for OAuth2-Proxy Molecule tests
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+        public: true
+      loop:
+        - com.devture.ansible.role.playbook_help
+        - com.devture.ansible.role.systemd_docker_base
+        - "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') | basename }}"
+      loop_control:
+        loop_var: role_name
+
+    # The stub has to be answering before OAuth2-Proxy starts: OAuth2-Proxy
+    # performs OIDC discovery during startup and exits when it fails. It also
+    # has to join the container network that the role creates, which is why it
+    # is started here rather than in `prepare.yml` - and why these tasks live
+    # in this play, where the role's own defaults are in scope.
+    - name: Query the state of the OAuth2-Proxy Molecule stub container
+      ansible.builtin.command:
+        argv:
+          - docker
+          - inspect
+          - "{{ oauth2_proxy_molecule_stub_container_name }}"
+      register: oauth2_proxy_molecule_stub_state
+      changed_when: false
+      failed_when: false
+
+    # Started with `--rm`, so a stub that died leaves nothing behind to
+    # conflict with the name and simply gets started again here.
+    - name: Ensure the OAuth2-Proxy Molecule stub container is started
+      when: >-
+        oauth2_proxy_molecule_stub_state.rc != 0
+        or not (oauth2_proxy_molecule_stub_state.stdout | from_json)[0].State.Running | bool
+      ansible.builtin.command:
+        argv:
+          - docker
+          - run
+          - --detach
+          - --rm
+          - "--name={{ oauth2_proxy_molecule_stub_container_name }}"
+          - "--network={{ oauth2_proxy_container_network }}"
+          - "--env=ISSUER={{ oauth2_proxy_molecule_issuer_url }}"
+          - "--env=OIDC_PORT={{ oauth2_proxy_molecule_stub_oidc_port }}"
+          - "--env=UPSTREAM_PORT={{ oauth2_proxy_molecule_stub_upstream_port }}"
+          - "--env=UPSTREAM_MARKER={{ oauth2_proxy_molecule_upstream_marker }}"
+          - "--volume={{ oauth2_proxy_molecule_stub_path }}/stub.py:/stub.py:ro"
+          - "{{ oauth2_proxy_molecule_stub_image }}"
+          - python3
+          - /stub.py
+      changed_when: true
+
+    # Asked from inside the stub container, because it publishes no ports on
+    # the test host - it is only reachable from the container network.
+    - name: Wait for the OAuth2-Proxy Molecule stub to serve OIDC discovery (up to 60s)
+      ansible.builtin.command:
+        argv:
+          - docker
+          - exec
+          - "{{ oauth2_proxy_molecule_stub_container_name }}"
+          - python3
+          - -c
+          - |
+            import urllib.request
+
+            url = "http://127.0.0.1:{{ oauth2_proxy_molecule_stub_oidc_port }}/.well-known/openid-configuration"
+            print(urllib.request.urlopen(url, timeout=5).status)
+      register: oauth2_proxy_molecule_stub_discovery
+      changed_when: false
+      failed_when: false
+      until: oauth2_proxy_molecule_stub_discovery.stdout | trim == '200'
+      retries: 12
+      delay: 5
+
+    - name: Assert the OAuth2-Proxy Molecule stub serves OIDC discovery
+      ansible.builtin.assert:
+        that: oauth2_proxy_molecule_stub_discovery.stdout | trim == '200'
+        fail_msg: "The Molecule stub does not serve OIDC discovery: {{ oauth2_proxy_molecule_stub_discovery.stderr | default('') }}"
+        success_msg: "The Molecule stub serves OIDC discovery"
+
+- name: Ensure OAuth2-Proxy service is started
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Ensure systemd daemon is reloaded
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+
+    - name: Ensure OAuth2-Proxy systemd service is started
+      ansible.builtin.systemd_service:
+        name: oauth2-proxy.service
+        state: started
+
+    # `state: started` leaves an already-running service alone, so on a second
+    # converge against the same instance it would keep running the previous
+    # unit file and `verify.yml` would be probing something the role no longer
+    # generates. The role works out whether anything it manages changed;
+    # acting on that here is what a playbook's systemd service manager role
+    # does, and it stays idempotent because an unchanged run computes `false`.
+    - name: Ensure OAuth2-Proxy systemd service is restarted if necessary
+      when: oauth2_proxy_restart_necessary | bool
+      ansible.builtin.systemd_service:
+        name: oauth2-proxy.service
+        state: restarted

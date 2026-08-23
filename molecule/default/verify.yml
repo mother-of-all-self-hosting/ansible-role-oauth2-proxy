@@ -1,0 +1,213 @@
+# SPDX-FileCopyrightText: 2026 Slavi Pantaleev
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+---
+- name: Verify OAuth2-Proxy
+  hosts: all
+  become: true
+  gather_facts: false
+  vars:
+    oauth2_proxy_molecule_base_url: "http://127.0.0.1:{{ oauth2_proxy_molecule_bind_port }}"
+  tasks:
+    # The role is not included in this playbook, so its defaults are not in
+    # scope. Reading defaults/main.yml directly keeps the version assertion
+    # below tied to the value that Renovate bumps, with nothing to keep in
+    # sync in this scenario. include_vars reads from the controller.
+    - name: Load the OAuth2-Proxy role defaults
+      ansible.builtin.include_vars:
+        file: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/defaults/main.yml"
+        name: oauth2_proxy_defaults
+
+    - name: Load the OAuth2-Proxy Molecule test credentials
+      ansible.builtin.include_vars:
+        file: "{{ lookup('env', 'MOLECULE_SCENARIO_DIRECTORY') }}/vars/credentials.yml"
+
+    - name: Wait for OAuth2-Proxy service to become active (up to 180s)
+      ansible.builtin.systemd:
+        name: oauth2-proxy.service
+      register: oauth2_proxy_service
+      until: oauth2_proxy_service.status.ActiveState == 'active'
+      retries: 36
+      delay: 5
+
+    # OAuth2-Proxy validates its whole configuration at startup and exits
+    # rather than run with one it does not like. Started with no configuration
+    # at all it exits 1 on the missing client ID, secret and email domain; with
+    # a cookie secret that is not 16, 24 or 32 bytes it exits 1 on that; and
+    # with an OIDC issuer URL it cannot reach it exits 1 while performing
+    # discovery. Under this unit's `Restart=always` every one of those is a
+    # crash loop rather than a running service, so an OAuth2-Proxy that is
+    # active is already one whose `env` file this role templated correctly and
+    # which reached the configured provider.
+    - name: Assert OAuth2-Proxy service is active
+      ansible.builtin.assert:
+        that: oauth2_proxy_service.status.ActiveState == 'active'
+        fail_msg: "oauth2-proxy.service not active ({{ oauth2_proxy_service.status.ActiveState }})"
+        success_msg: "oauth2-proxy.service is active"
+
+    - name: Retrieve OAuth2-Proxy service log for debugging
+      when: oauth2_proxy_debug_service_enabled | bool
+      ansible.builtin.command:
+        cmd: journalctl -xeu oauth2-proxy.service
+      changed_when: false
+
+    # The one endpoint OAuth2-Proxy serves without involving the provider or
+    # the upstream at all, and the first proof that the listener the role
+    # configured is really bound and published on the host.
+    - name: Wait for the OAuth2-Proxy health endpoint to answer (up to 180s)
+      ansible.builtin.uri:
+        url: "{{ oauth2_proxy_molecule_base_url }}/ping"
+        method: GET
+        follow_redirects: none
+        return_content: true
+      register: oauth2_proxy_ping
+      until: oauth2_proxy_ping.status == 200
+      retries: 36
+      delay: 5
+
+    - name: Assert the OAuth2-Proxy health endpoint reports OK
+      ansible.builtin.assert:
+        that: oauth2_proxy_ping.content | trim == 'OK'
+        fail_msg: "OAuth2-Proxy health endpoint answered {{ oauth2_proxy_ping.content | trim }}"
+        success_msg: "OAuth2-Proxy health endpoint reports OK"
+
+    # The sign-in page is where three settings out of the `env` file this role
+    # templates - and nothing else - become visible. Finding all three of them
+    # rendered is what ties the served instance back to the values the role was
+    # given, rather than to OAuth2-Proxy's own defaults.
+    - name: Fetch the OAuth2-Proxy sign-in page
+      ansible.builtin.uri:
+        url: "{{ oauth2_proxy_molecule_base_url }}/oauth2/sign_in"
+        method: GET
+        follow_redirects: none
+        return_content: true
+      register: oauth2_proxy_sign_in
+
+    - name: Assert the OAuth2-Proxy sign-in page renders the configured provider, banner and footer
+      ansible.builtin.assert:
+        that:
+          - oauth2_proxy_environment_variable_provider_display_name in oauth2_proxy_sign_in.content
+          - "'oauth2-proxy-molecule-banner' in oauth2_proxy_sign_in.content"
+          - "'oauth2-proxy-molecule-footer' in oauth2_proxy_sign_in.content"
+        fail_msg: "The OAuth2-Proxy sign-in page does not carry the configured provider name, banner and footer"
+        success_msg: "The OAuth2-Proxy sign-in page renders the configured provider name, banner and footer"
+
+    # The point of this role: a request for a protected path is not allowed
+    # through to the application. OAuth2-Proxy answers it with 403 and the
+    # sign-in page rather than a redirect, so the marker that the upstream
+    # prefixes every response with must be absent from what comes back.
+    - name: Request a protected path through OAuth2-Proxy without authenticating
+      ansible.builtin.uri:
+        url: "{{ oauth2_proxy_molecule_base_url }}{{ oauth2_proxy_molecule_private_path }}"
+        method: GET
+        follow_redirects: none
+        status_code: 403
+        return_content: true
+      register: oauth2_proxy_private
+
+    - name: Assert OAuth2-Proxy withheld the protected path
+      ansible.builtin.assert:
+        that:
+          - oauth2_proxy_molecule_upstream_marker not in oauth2_proxy_private.content
+          - oauth2_proxy_environment_variable_provider_display_name in oauth2_proxy_private.content
+        fail_msg: "OAuth2-Proxy did not withhold {{ oauth2_proxy_molecule_private_path }}"
+        success_msg: "OAuth2-Proxy withheld {{ oauth2_proxy_molecule_private_path }} and offered the sign-in page"
+
+    # The other direction of the same setting: a path covered by
+    # `OAUTH2_PROXY_SKIP_AUTH_ROUTES` is proxied straight through. The response
+    # carries the upstream's marker and the path it was asked for, so this is
+    # also the proof that OAuth2-Proxy reaches the upstream it was configured
+    # with, over the container network, with the request path intact.
+    - name: Request an unauthenticated-by-configuration path through OAuth2-Proxy
+      ansible.builtin.uri:
+        url: "{{ oauth2_proxy_molecule_base_url }}{{ oauth2_proxy_molecule_public_path }}"
+        method: GET
+        follow_redirects: none
+        return_content: true
+      register: oauth2_proxy_public
+
+    - name: Assert OAuth2-Proxy proxied the unauthenticated-by-configuration path to the upstream
+      ansible.builtin.assert:
+        that:
+          - oauth2_proxy_public.content | trim == oauth2_proxy_molecule_upstream_marker ~ ' ' ~ oauth2_proxy_molecule_public_path
+        fail_msg: "OAuth2-Proxy did not proxy {{ oauth2_proxy_molecule_public_path }} to the upstream: {{ oauth2_proxy_public.content | trim }}"
+        success_msg: "OAuth2-Proxy proxied {{ oauth2_proxy_molecule_public_path }} to the upstream"
+
+    # The endpoint a reverse-proxy calls as a ForwardAuth/auth_request
+    # middleware, which is how this role is most often deployed. Without a
+    # session it must answer 401 - the answer that makes the reverse-proxy
+    # refuse the request it is asking about.
+    - name: Ask the OAuth2-Proxy ForwardAuth endpoint about an unauthenticated request
+      ansible.builtin.uri:
+        url: "{{ oauth2_proxy_molecule_base_url }}/oauth2/auth"
+        method: GET
+        follow_redirects: none
+        status_code: 401
+        return_content: true
+      register: oauth2_proxy_forward_auth
+
+    - name: Assert the OAuth2-Proxy ForwardAuth endpoint refuses an unauthenticated request
+      ansible.builtin.assert:
+        that: oauth2_proxy_molecule_upstream_marker not in oauth2_proxy_forward_auth.content
+        fail_msg: "The OAuth2-Proxy ForwardAuth endpoint did not refuse an unauthenticated request"
+        success_msg: "The OAuth2-Proxy ForwardAuth endpoint refuses an unauthenticated request"
+
+    # Where the sign-in button leads. OAuth2-Proxy only knows this URL because
+    # it fetched the discovery document from the issuer the role configured and
+    # accepted it, so both the issuer URL and the client ID out of the role's
+    # `env` file are demonstrably in the running process. The `Location` header
+    # is absolute, hence the split.
+    - name: Start an OAuth2-Proxy sign-in
+      ansible.builtin.uri:
+        url: "{{ oauth2_proxy_molecule_base_url }}/oauth2/start"
+        method: GET
+        follow_redirects: none
+        status_code: 302
+      register: oauth2_proxy_start
+
+    - name: Assert OAuth2-Proxy redirects to the configured provider with the configured client ID
+      ansible.builtin.assert:
+        that:
+          - oauth2_proxy_start.location | urlsplit('scheme') == oauth2_proxy_molecule_issuer_url | urlsplit('scheme')
+          - oauth2_proxy_start.location | urlsplit('netloc') == oauth2_proxy_molecule_issuer_url | urlsplit('netloc')
+          - oauth2_proxy_start.location | urlsplit('path') == '/authorize'
+          - "'client_id=' ~ oauth2_proxy_environment_variable_client_id in (oauth2_proxy_start.location | urlsplit('query'))"
+        fail_msg: "OAuth2-Proxy does not redirect to the configured provider: {{ oauth2_proxy_start.location }}"
+        success_msg: "OAuth2-Proxy redirects to the configured provider: {{ oauth2_proxy_start.location | urlsplit('netloc') }}{{ oauth2_proxy_start.location | urlsplit('path') }}"
+
+    # OAuth2-Proxy does not report its version over HTTP, so it is asked
+    # directly. The docker CLI is used rather than community.docker, which is
+    # not available to playbooks running against the Molecule container.
+    - name: Query the version of the running OAuth2-Proxy
+      ansible.builtin.command:
+        argv:
+          - docker
+          - exec
+          - oauth2-proxy
+          - /bin/oauth2-proxy
+          - --version
+      register: oauth2_proxy_version_command
+      changed_when: false
+
+    # OAuth2-Proxy reports its version as `oauth2-proxy v7.15.4 (built with
+    # go1.26.7)`, with a leading `v` that the role's version variable also
+    # carries. Any leading `v` is normalized away on both sides, so that this
+    # keeps holding if either side ever starts or stops carrying one.
+    - name: Assert the running OAuth2-Proxy is the version this role installs
+      ansible.builtin.assert:
+        that: >-
+          oauth2_proxy_version_command.stdout.split()[1] | regex_replace('^v', '')
+          == oauth2_proxy_defaults.oauth2_proxy_version | regex_replace('^v', '')
+        fail_msg: "OAuth2-Proxy reports {{ oauth2_proxy_version_command.stdout }}, expected {{ oauth2_proxy_defaults.oauth2_proxy_version }}"
+        success_msg: "OAuth2-Proxy reports {{ oauth2_proxy_version_command.stdout }}"
+
+    - name: Show OAuth2-Proxy verification summary
+      ansible.builtin.debug:
+        msg:
+          - "OAuth2-Proxy systemd: {{ oauth2_proxy_service.status.ActiveState }}"
+          - "OAuth2-Proxy version: {{ oauth2_proxy_version_command.stdout }}"
+          - "OAuth2-Proxy health: {{ oauth2_proxy_ping.content | trim }}"
+          - "OAuth2-Proxy sign-in redirect: {{ oauth2_proxy_start.location }}"
+          - "OAuth2-Proxy protected path: {{ oauth2_proxy_molecule_private_path }} -> {{ oauth2_proxy_private.status }}"
+          - "OAuth2-Proxy skipped path: {{ oauth2_proxy_molecule_public_path }} -> {{ oauth2_proxy_public.status }} {{ oauth2_proxy_public.content | trim }}"

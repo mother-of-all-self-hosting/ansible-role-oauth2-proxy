@@ -1,0 +1,56 @@
+# SPDX-FileCopyrightText: 2026 Slavi Pantaleev
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+---
+- name: Prepare OAuth2-Proxy Molecule tests
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Ensure apt cache is updated for OAuth2-Proxy Molecule tests preparation
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 600
+      when: ansible_facts["os_family"] == 'Debian'
+
+    - name: Ensure required packages are installed for OAuth2-Proxy Molecule tests preparation
+      ansible.builtin.package:
+        name:
+          - python3-requests
+        state: present
+
+    - name: Ensure Docker is installed for OAuth2-Proxy Molecule tests preparation
+      ansible.builtin.include_role:
+        name: ansible-role-docker
+      vars:
+        docker_daemon_options:
+          storage-driver: vfs
+
+    - name: Ensure the OAuth2-Proxy Molecule stub directory exists
+      ansible.builtin.file:
+        path: "{{ oauth2_proxy_molecule_stub_path }}"
+        state: directory
+        mode: "0755"
+
+    # Mounted into the stub container rather than baked into an image, so that
+    # the scenario needs no image build and no registry of its own.
+    - name: Ensure the OAuth2-Proxy Molecule stub is installed
+      ansible.builtin.copy:
+        src: stub.py
+        dest: "{{ oauth2_proxy_molecule_stub_path }}/stub.py"
+        mode: "0644"
+
+    # Pulled here rather than on first use, so that a slow or rate-limited
+    # registry fails during preparation instead of looking like a broken stub.
+    - name: Ensure the OAuth2-Proxy Molecule stub container image is pulled
+      ansible.builtin.command:
+        argv:
+          - docker
+          - pull
+          - "{{ oauth2_proxy_molecule_stub_image }}"
+      register: oauth2_proxy_molecule_stub_image_pull
+      changed_when: "'Downloaded newer image' in oauth2_proxy_molecule_stub_image_pull.stdout"
+      retries: 5
+      delay: 10
+      until: oauth2_proxy_molecule_stub_image_pull is not failed
