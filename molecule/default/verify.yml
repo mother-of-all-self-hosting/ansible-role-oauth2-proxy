@@ -203,7 +203,7 @@
         fail_msg: "OAuth2-Proxy reports {{ oauth2_proxy_version_command.stdout }}, expected {{ oauth2_proxy_defaults.oauth2_proxy_version }}"
         success_msg: "OAuth2-Proxy reports {{ oauth2_proxy_version_command.stdout }}"
 
-    - name: Show OAuth2-Proxy verification summary
+    - name: Show the OAuth2-Proxy verification summary
       ansible.builtin.debug:
         msg:
           - "OAuth2-Proxy systemd: {{ oauth2_proxy_service.status.ActiveState }}"
