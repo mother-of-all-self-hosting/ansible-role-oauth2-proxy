@@ -200,7 +200,7 @@
         that: >-
           oauth2_proxy_version_command.stdout.split()[1] | regex_replace('^v', '')
           == oauth2_proxy_defaults.oauth2_proxy_version | regex_replace('^v', '')
-        fail_msg: "OAuth2-Proxy reports {{ oauth2_proxy_version_command.stdout }}, expected {{ oauth2_proxy_defaults.oauth2_proxy_version }}"
+        fail_msg: "OAuth2-Proxy reports {{ oauth2_proxy_version_command.stdout | default('none') }}, expected {{ oauth2_proxy_defaults.oauth2_proxy_version }}"
         success_msg: "OAuth2-Proxy reports {{ oauth2_proxy_version_command.stdout }}"
 
     - name: Show the OAuth2-Proxy verification summary
