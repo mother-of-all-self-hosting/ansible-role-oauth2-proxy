@@ -53,6 +53,26 @@
         cmd: journalctl -xeu oauth2-proxy.service
       changed_when: false
 
+    # The one endpoint OAuth2-Proxy serves without involving the provider or
+    # the upstream at all, and the first proof that the listener the role
+    # configured is really bound and published on the host.
+    - name: Wait for the OAuth2-Proxy health endpoint to answer (up to 180s)
+      ansible.builtin.uri:
+        url: "{{ oauth2_proxy_molecule_base_url }}/ping"
+        method: GET
+        follow_redirects: none
+        return_content: true
+      register: oauth2_proxy_ping
+      until: oauth2_proxy_ping.status == 200
+      retries: 36
+      delay: 5
+
+    - name: Assert the OAuth2-Proxy health endpoint reports OK
+      ansible.builtin.assert:
+        that: oauth2_proxy_ping.content | trim == 'OK'
+        fail_msg: "OAuth2-Proxy health endpoint answered {{ oauth2_proxy_ping.content | trim }}"
+        success_msg: "OAuth2-Proxy health endpoint reports OK"
+
     # OAuth2-Proxy does not report its version over HTTP, so it is asked
     # directly. The docker CLI is used rather than community.docker, which is
     # not available to playbooks running against the Molecule container.
@@ -76,26 +96,6 @@
         that: "oauth2_proxy_version_command.stdout.split()[1] | regex_replace('^v', '') == oauth2_proxy_defaults.oauth2_proxy_version | regex_replace('^v', '')"
         fail_msg: "OAuth2-Proxy reports {{ oauth2_proxy_version_command.stdout | default('none') }}, expected {{ oauth2_proxy_defaults.oauth2_proxy_version }}"
         success_msg: "OAuth2-Proxy reports {{ oauth2_proxy_version_command.stdout }}"
-
-    # The one endpoint OAuth2-Proxy serves without involving the provider or
-    # the upstream at all, and the first proof that the listener the role
-    # configured is really bound and published on the host.
-    - name: Wait for the OAuth2-Proxy health endpoint to answer (up to 180s)
-      ansible.builtin.uri:
-        url: "{{ oauth2_proxy_molecule_base_url }}/ping"
-        method: GET
-        follow_redirects: none
-        return_content: true
-      register: oauth2_proxy_ping
-      until: oauth2_proxy_ping.status == 200
-      retries: 36
-      delay: 5
-
-    - name: Assert the OAuth2-Proxy health endpoint reports OK
-      ansible.builtin.assert:
-        that: oauth2_proxy_ping.content | trim == 'OK'
-        fail_msg: "OAuth2-Proxy health endpoint answered {{ oauth2_proxy_ping.content | trim }}"
-        success_msg: "OAuth2-Proxy health endpoint reports OK"
 
     # The sign-in page is where three settings out of the `env` file this role
     # templates - and nothing else - become visible. Finding all three of them
