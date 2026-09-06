@@ -53,6 +53,30 @@
         cmd: journalctl -xeu oauth2-proxy.service
       changed_when: false
 
+    # OAuth2-Proxy does not report its version over HTTP, so it is asked
+    # directly. The docker CLI is used rather than community.docker, which is
+    # not available to playbooks running against the Molecule container.
+    - name: Query the version of the running OAuth2-Proxy
+      ansible.builtin.command:
+        argv:
+          - docker
+          - exec
+          - oauth2-proxy
+          - /bin/oauth2-proxy
+          - --version
+      register: oauth2_proxy_version_command
+      changed_when: false
+
+    # OAuth2-Proxy reports its version as `oauth2-proxy v7.15.4 (built with
+    # go1.26.7)`, with a leading `v` that the role's version variable also
+    # carries. Any leading `v` is normalized
+    # away on both sides, so that this keeps holding if either side ever changes.
+    - name: Assert the running OAuth2-Proxy is the version this role installs
+      ansible.builtin.assert:
+        that: "oauth2_proxy_version_command.stdout.split()[1] | regex_replace('^v', '') == oauth2_proxy_defaults.oauth2_proxy_version | regex_replace('^v', '')"
+        fail_msg: "OAuth2-Proxy reports {{ oauth2_proxy_version_command.stdout | default('none') }}, expected {{ oauth2_proxy_defaults.oauth2_proxy_version }}"
+        success_msg: "OAuth2-Proxy reports {{ oauth2_proxy_version_command.stdout }}"
+
     # The one endpoint OAuth2-Proxy serves without involving the provider or
     # the upstream at all, and the first proof that the listener the role
     # configured is really bound and published on the host.
@@ -176,30 +200,6 @@
           - "'client_id=' ~ oauth2_proxy_environment_variable_client_id in (oauth2_proxy_start.location | urlsplit('query'))"
         fail_msg: "OAuth2-Proxy does not redirect to the configured provider: {{ oauth2_proxy_start.location }}"
         success_msg: "OAuth2-Proxy redirects to the configured provider: {{ oauth2_proxy_start.location | urlsplit('netloc') }}{{ oauth2_proxy_start.location | urlsplit('path') }}"
-
-    # OAuth2-Proxy does not report its version over HTTP, so it is asked
-    # directly. The docker CLI is used rather than community.docker, which is
-    # not available to playbooks running against the Molecule container.
-    - name: Query the version of the running OAuth2-Proxy
-      ansible.builtin.command:
-        argv:
-          - docker
-          - exec
-          - oauth2-proxy
-          - /bin/oauth2-proxy
-          - --version
-      register: oauth2_proxy_version_command
-      changed_when: false
-
-    # OAuth2-Proxy reports its version as `oauth2-proxy v7.15.4 (built with
-    # go1.26.7)`, with a leading `v` that the role's version variable also
-    # carries. Any leading `v` is normalized
-    # away on both sides, so that this keeps holding if either side ever changes.
-    - name: Assert the running OAuth2-Proxy is the version this role installs
-      ansible.builtin.assert:
-        that: "oauth2_proxy_version_command.stdout.split()[1] | regex_replace('^v', '') == oauth2_proxy_defaults.oauth2_proxy_version | regex_replace('^v', '')"
-        fail_msg: "OAuth2-Proxy reports {{ oauth2_proxy_version_command.stdout | default('none') }}, expected {{ oauth2_proxy_defaults.oauth2_proxy_version }}"
-        success_msg: "OAuth2-Proxy reports {{ oauth2_proxy_version_command.stdout }}"
 
     - name: Show the OAuth2-Proxy verification summary
       ansible.builtin.debug:
