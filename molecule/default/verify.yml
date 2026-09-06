@@ -197,9 +197,7 @@
     # keeps holding if either side ever starts or stops carrying one.
     - name: Assert the running OAuth2-Proxy is the version this role installs
       ansible.builtin.assert:
-        that: >-
-          oauth2_proxy_version_command.stdout.split()[1] | regex_replace('^v', '')
-          == oauth2_proxy_defaults.oauth2_proxy_version | regex_replace('^v', '')
+        that: "oauth2_proxy_version_command.stdout.split()[1] | regex_replace('^v', '') == oauth2_proxy_defaults.oauth2_proxy_version | regex_replace('^v', '')"
         fail_msg: "OAuth2-Proxy reports {{ oauth2_proxy_version_command.stdout | default('none') }}, expected {{ oauth2_proxy_defaults.oauth2_proxy_version }}"
         success_msg: "OAuth2-Proxy reports {{ oauth2_proxy_version_command.stdout }}"
 
