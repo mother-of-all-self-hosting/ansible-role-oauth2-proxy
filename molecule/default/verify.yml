@@ -193,8 +193,8 @@
 
     # OAuth2-Proxy reports its version as `oauth2-proxy v7.15.4 (built with
     # go1.26.7)`, with a leading `v` that the role's version variable also
-    # carries. Any leading `v` is normalized away on both sides, so that this
-    # keeps holding if either side ever starts or stops carrying one.
+    # carries. Any leading `v` is normalized
+    # away on both sides, so that this keeps holding if either side ever changes.
     - name: Assert the running OAuth2-Proxy is the version this role installs
       ansible.builtin.assert:
         that: "oauth2_proxy_version_command.stdout.split()[1] | regex_replace('^v', '') == oauth2_proxy_defaults.oauth2_proxy_version | regex_replace('^v', '')"
