@@ -31,6 +31,9 @@
       until: oauth2_proxy_service.status.ActiveState == 'active'
       retries: 36
       delay: 5
+      # So that giving up is reported by the assertion below rather than as a
+      # wall of systemd unit properties.
+      failed_when: false
 
     # OAuth2-Proxy validates its whole configuration at startup and exits
     # rather than run with one it does not like. Started with no configuration
