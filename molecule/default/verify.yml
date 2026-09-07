@@ -24,8 +24,8 @@
       ansible.builtin.include_vars:
         file: "{{ lookup('env', 'MOLECULE_SCENARIO_DIRECTORY') }}/vars/credentials.yml"
 
-    - name: Wait for OAuth2-Proxy service to become active (up to 180s)
-      ansible.builtin.systemd:
+    - name: Wait for the OAuth2-Proxy systemd service to become active (up to 180s)
+      ansible.builtin.systemd_service:
         name: oauth2-proxy.service
       register: oauth2_proxy_service
       until: oauth2_proxy_service.status.ActiveState == 'active'
@@ -41,13 +41,13 @@
     # crash loop rather than a running service, so an OAuth2-Proxy that is
     # active is already one whose `env` file this role templated correctly and
     # which reached the configured provider.
-    - name: Assert OAuth2-Proxy service is active
+    - name: Assert the OAuth2-Proxy systemd service is active
       ansible.builtin.assert:
         that: oauth2_proxy_service.status.ActiveState == 'active'
-        fail_msg: "oauth2-proxy.service not active ({{ oauth2_proxy_service.status.ActiveState }})"
+        fail_msg: "oauth2-proxy.service is not active ({{ oauth2_proxy_service.status.ActiveState }})"
         success_msg: "oauth2-proxy.service is active"
 
-    - name: Retrieve OAuth2-Proxy service log for debugging
+    - name: Retrieve the OAuth2-Proxy systemd service log for debugging
       when: oauth2_proxy_debug_service_enabled | bool
       ansible.builtin.command:
         cmd: journalctl -xeu oauth2-proxy.service
