@@ -47,7 +47,7 @@
         argv:
           - docker
           - run
-          - --detach
+          - -d
           - --rm
           - "--name={{ oauth2_proxy_molecule_stub_container_name }}"
           - "--network={{ oauth2_proxy_container_network }}"
