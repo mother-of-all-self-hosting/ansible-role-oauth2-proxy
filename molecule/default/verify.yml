@@ -87,7 +87,7 @@
           - oauth2-proxy
           - /bin/oauth2-proxy
           - --version
-      register: oauth2_proxy_version_command
+      register: oauth2_proxy_version_reported
       changed_when: false
 
     # OAuth2-Proxy reports its version as `oauth2-proxy v7.15.4 (built with
@@ -96,9 +96,9 @@
     # away on both sides, so that this keeps holding if either side ever changes.
     - name: Assert the running OAuth2-Proxy is the version this role installs
       ansible.builtin.assert:
-        that: "oauth2_proxy_version_command.stdout.split()[1] | regex_replace('^v', '') == oauth2_proxy_defaults.oauth2_proxy_version | regex_replace('^v', '')"
-        fail_msg: "OAuth2-Proxy reports {{ oauth2_proxy_version_command.stdout | default('none') }}, expected {{ oauth2_proxy_defaults.oauth2_proxy_version }}"
-        success_msg: "OAuth2-Proxy reports {{ oauth2_proxy_version_command.stdout }}"
+        that: "oauth2_proxy_version_reported.stdout.split()[1] | regex_replace('^v', '') == oauth2_proxy_defaults.oauth2_proxy_version | regex_replace('^v', '')"
+        fail_msg: "OAuth2-Proxy reports {{ oauth2_proxy_version_reported.stdout | default('none') }}, expected {{ oauth2_proxy_defaults.oauth2_proxy_version }}"
+        success_msg: "OAuth2-Proxy reports {{ oauth2_proxy_version_reported.stdout }}"
 
     # The sign-in page is where three settings out of the `env` file this role
     # templates - and nothing else - become visible. Finding all three of them
@@ -208,7 +208,7 @@
       ansible.builtin.debug:
         msg:
           - "OAuth2-Proxy systemd: {{ oauth2_proxy_service.status.ActiveState }}"
-          - "OAuth2-Proxy version: {{ oauth2_proxy_version_command.stdout }}"
+          - "OAuth2-Proxy version: {{ oauth2_proxy_version_reported.stdout }}"
           - "OAuth2-Proxy health: {{ oauth2_proxy_ping.content | trim }}"
           - "OAuth2-Proxy sign-in redirect: {{ oauth2_proxy_start.location }}"
           - "OAuth2-Proxy protected path: {{ oauth2_proxy_molecule_private_path }} -> {{ oauth2_proxy_private.status }}"
