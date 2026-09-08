@@ -81,12 +81,7 @@
     # not available to playbooks running against the Molecule container.
     - name: Query the version of the running OAuth2-Proxy
       ansible.builtin.command:
-        argv:
-          - docker
-          - exec
-          - oauth2-proxy
-          - /bin/oauth2-proxy
-          - --version
+        cmd: docker exec oauth2-proxy /bin/oauth2-proxy --version
       register: oauth2_proxy_version_reported
       changed_when: false
 

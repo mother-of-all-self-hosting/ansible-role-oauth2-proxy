@@ -32,10 +32,7 @@
     # in this play, where the role's own defaults are in scope.
     - name: Query the state of the OAuth2-Proxy Molecule stub container
       ansible.builtin.command:
-        argv:
-          - docker
-          - inspect
-          - "{{ oauth2_proxy_molecule_stub_container_name }}"
+        cmd: docker inspect {{ oauth2_proxy_molecule_stub_container_name }}
       register: oauth2_proxy_molecule_stub_state
       changed_when: false
       failed_when: false

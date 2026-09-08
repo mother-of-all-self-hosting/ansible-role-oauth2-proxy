@@ -47,10 +47,7 @@
     # registry fails during preparation instead of looking like a broken stub.
     - name: Ensure the OAuth2-Proxy Molecule stub container image is pulled
       ansible.builtin.command:
-        argv:
-          - docker
-          - pull
-          - "{{ oauth2_proxy_molecule_stub_image }}"
+        cmd: docker pull {{ oauth2_proxy_molecule_stub_image }}
       register: oauth2_proxy_molecule_stub_image_pull
       changed_when: "'Downloaded newer image' in oauth2_proxy_molecule_stub_image_pull.stdout"
       retries: 5
