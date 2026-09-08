@@ -53,7 +53,7 @@
     - name: Retrieve the OAuth2-Proxy systemd service log for debugging
       when: oauth2_proxy_debug_service_enabled | bool
       ansible.builtin.command:
-        cmd: journalctl -xeu oauth2-proxy.service
+        cmd: journalctl --no-pager --output=cat --unit=oauth2-proxy.service
       changed_when: false
 
     # The one endpoint OAuth2-Proxy serves without involving the provider or
