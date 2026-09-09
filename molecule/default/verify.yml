@@ -12,6 +12,8 @@
   vars:
     oauth2_proxy_molecule_base_url: "http://127.0.0.1:{{ oauth2_proxy_molecule_bind_port }}"
   tasks:
+    - name: Verify that OAuth2-Proxy works
+      block:
     # The role is not included in this playbook, so its defaults are not in
     # scope. Reading defaults/main.yml directly ties the version assertion
     # below.
@@ -208,3 +210,19 @@
           - "OAuth2-Proxy sign-in redirect: {{ oauth2_proxy_start.location }}"
           - "OAuth2-Proxy protected path: {{ oauth2_proxy_molecule_private_path }} -> {{ oauth2_proxy_private.status }}"
           - "OAuth2-Proxy skipped path: {{ oauth2_proxy_molecule_public_path }} -> {{ oauth2_proxy_public.status }} {{ oauth2_proxy_public.content | trim }}"
+
+      rescue:
+        # Whatever went wrong, the reason is almost always in the systemd service log.
+        - name: Retrieve the OAuth2-Proxy systemd service log
+          ansible.builtin.command:
+            cmd: journalctl --no-pager --output=cat --unit=oauth2-proxy.service
+          register: oauth2_proxy_service_log
+          changed_when: false
+
+        - name: Show the OAuth2-Proxy systemd service log
+          ansible.builtin.debug:
+            var: oauth2_proxy_service_log.stdout_lines
+
+        - name: Fail because verification did not pass
+          ansible.builtin.fail:
+            msg: "OAuth2-Proxy verification failed. The systemd service log is printed above."
