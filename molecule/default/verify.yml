@@ -9,8 +9,13 @@
   hosts: all
   become: true
   gather_facts: false
+
   vars:
     oauth2_proxy_molecule_base_url: "http://127.0.0.1:{{ oauth2_proxy_molecule_bind_port }}"
+
+    oauth2_proxy_verify_units:
+      - oauth2-proxy.service
+
   tasks:
     - name: Verify that OAuth2-Proxy works
       block:
@@ -22,41 +27,39 @@
             file: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/defaults/main.yml"
             name: oauth2_proxy_defaults
 
-        - name: Load the OAuth2-Proxy Molecule test credentials
-          ansible.builtin.include_vars:
-            file: "{{ lookup('env', 'MOLECULE_SCENARIO_DIRECTORY') }}/vars/credentials.yml"
-
-        - name: Wait for the OAuth2-Proxy systemd service to become active (up to 180s)
+        - name: Wait for the OAuth2-Proxy systemd services to become active (up to 180s each)
           ansible.builtin.systemd_service:
-            name: oauth2-proxy.service
-          register: oauth2_proxy_service
-          until: oauth2_proxy_service.status.ActiveState == 'active'
+            name: "{{ item }}"
+          register: oauth2_proxy_services
+          until: oauth2_proxy_services.status.ActiveState == 'active'
           retries: 36
           delay: 5
+          loop: "{{ oauth2_proxy_verify_units }}"
           # So that giving up is reported by the assertion below rather than as a
           # wall of systemd unit properties.
           failed_when: false
 
-        # OAuth2-Proxy validates its whole configuration at startup and exits
-        # rather than run with one it does not like. Started with no configuration
-        # at all it exits 1 on the missing client ID, secret and email domain; with
-        # a cookie secret that is not 16, 24 or 32 bytes it exits 1 on that; and
-        # with an OIDC issuer URL it cannot reach it exits 1 while performing
-        # discovery. Under this unit's `Restart=always` every one of those is a
-        # crash loop rather than a running service, so an OAuth2-Proxy that is
-        # active is already one whose `env` file this role templated correctly and
-        # which reached the configured provider.
-        - name: Assert the OAuth2-Proxy systemd service is active
+        # `Restart=always` in the systemd unit means that even a container which crashes
+        # and gets restarted reads as active here, so this is a precondition rather than
+        # a result.
+        - name: Assert the OAuth2-Proxy systemd services are active
           ansible.builtin.assert:
-            that: oauth2_proxy_service.status.ActiveState == 'active'
-            fail_msg: "oauth2-proxy.service is not active ({{ oauth2_proxy_service.status.ActiveState }})"
-            success_msg: "oauth2-proxy.service is active"
+            that: oauth2_proxy_services.results | map(attribute='status.ActiveState') | unique | list == ['active']
+            fail_msg: >-
+              Not every service is active:
+              {{ dict(oauth2_proxy_verify_units | zip(oauth2_proxy_services.results | map(attribute='status.ActiveState'))) }}
+            success_msg: "Every systemd service is active"
 
-        - name: Retrieve the OAuth2-Proxy systemd service log for debugging
+        - name: Retrieve the OAuth2-Proxy systemd services log for debugging
           when: oauth2_proxy_debug_service_enabled | bool
           ansible.builtin.command:
-            cmd: journalctl --no-pager --output=cat --unit=oauth2-proxy.service
+            cmd: "journalctl --no-pager --output=cat --unit={{ item }}"
           changed_when: false
+          loop: "{{ oauth2_proxy_verify_units }}"
+
+        - name: Load the OAuth2-Proxy Molecule test credentials
+          ansible.builtin.include_vars:
+            file: "{{ lookup('env', 'MOLECULE_SCENARIO_DIRECTORY') }}/vars/credentials.yml"
 
         # The one endpoint OAuth2-Proxy serves without involving the provider or
         # the upstream at all, and the first proof that the listener the role
@@ -204,7 +207,7 @@
         - name: Show the OAuth2-Proxy verification summary
           ansible.builtin.debug:
             msg:
-              - "OAuth2-Proxy systemd: {{ oauth2_proxy_service.status.ActiveState }}"
+              - "OAuth2-Proxy systemd: {% for unit, state in oauth2_proxy_verify_units | zip(oauth2_proxy_services.results | map(attribute='status.ActiveState')) %}{{ unit }} ({{ state }}){% if not loop.last %}, {% endif %}{% endfor %}"
               - "OAuth2-Proxy version: {{ oauth2_proxy_version_reported.stdout }}"
               - "OAuth2-Proxy health: {{ oauth2_proxy_ping.content | trim }}"
               - "OAuth2-Proxy sign-in redirect: {{ oauth2_proxy_start.location }}"
