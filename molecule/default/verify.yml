@@ -64,22 +64,25 @@
         # The one endpoint OAuth2-Proxy serves without involving the provider or
         # the upstream at all, and the first proof that the listener the role
         # configured is really bound and published on the host.
-        - name: Wait for the OAuth2-Proxy health endpoint to answer (up to 180s)
+        - name: Wait for OAuth2-Proxy to report itself healthy (up to 180s)
           ansible.builtin.uri:
             url: "{{ oauth2_proxy_molecule_base_url }}/ping"
             method: GET
             follow_redirects: none
             return_content: true
-          register: oauth2_proxy_ping
-          until: oauth2_proxy_ping.status == 200
+          register: oauth2_proxy_health
+          until: oauth2_proxy_health.status == 200 and oauth2_proxy_health.content | trim == 'OK'
           retries: 36
           delay: 5
+          # So that giving up is reported by the assertion below rather than as a
+          # wall of systemd unit properties.
+          failed_when: false
 
-        - name: Assert the OAuth2-Proxy health endpoint reports OK
+        - name: Assert OAuth2-Proxy reports itself healthy
           ansible.builtin.assert:
-            that: oauth2_proxy_ping.content | trim == 'OK'
-            fail_msg: "OAuth2-Proxy health endpoint answered {{ oauth2_proxy_ping.content | trim }}"
-            success_msg: "OAuth2-Proxy health endpoint reports OK"
+            that: oauth2_proxy_health.content | trim == 'OK'
+            fail_msg: "OAuth2-Proxy did not report itself healthy: {{ oauth2_proxy_health.content | trim| default('no response') }}"
+            success_msg: "OAuth2-Proxy reports itself healthy"
 
         # OAuth2-Proxy does not report its version over HTTP, so it is asked
         # directly. The docker CLI is used rather than community.docker, which is
@@ -209,7 +212,7 @@
             msg:
               - "OAuth2-Proxy systemd: {% for unit, state in oauth2_proxy_verify_units | zip(oauth2_proxy_services.results | map(attribute='status.ActiveState')) %}{{ unit }} ({{ state }}){% if not loop.last %}, {% endif %}{% endfor %}"
               - "OAuth2-Proxy version: {{ oauth2_proxy_version_reported.stdout }}"
-              - "OAuth2-Proxy health: {{ oauth2_proxy_ping.content | trim }}"
+              - "OAuth2-Proxy health: {{ oauth2_proxy_health.content | trim }}"
               - "OAuth2-Proxy sign-in redirect: {{ oauth2_proxy_start.location }}"
               - "OAuth2-Proxy protected path: {{ oauth2_proxy_molecule_private_path }} -> {{ oauth2_proxy_private.status }}"
               - "OAuth2-Proxy skipped path: {{ oauth2_proxy_molecule_public_path }} -> {{ oauth2_proxy_public.status }} {{ oauth2_proxy_public.content | trim }}"
