@@ -31,6 +31,7 @@ provisioner:
       all:
         # Helper variables
         oauth2_proxy_debug_service_enabled: false
+        oauth2_proxy_restarts_check_enabled: true
 
         # The port on the host that OAuth2-Proxy is published on, so that
         # `verify.yml` can reach it.
