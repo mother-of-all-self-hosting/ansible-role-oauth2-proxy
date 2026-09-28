@@ -18,11 +18,25 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Setting up OAuth2-Proxy
 
-This is an [Ansible](https://www.ansible.com/) role which installs [OAuth2-Proxy](https://oauth2_proxybudget.org) to run as a [Docker](https://www.docker.com/) container wrapped in a systemd service.
+This is an [Ansible](https://www.ansible.com/) role which installs [OAuth2-Proxy](https://github.com/oauth2-proxy/oauth2-proxy) to run as a [Docker](https://www.docker.com/) container wrapped in a systemd service.
 
-OAuth2-Proxy is a local-first personal finance tool.
+OAuth2-Proxy is a reverse proxy and static file server that provides authentication using OpenID Connect Providers (Google, GitHub, authentik, Keycloak, and others) to SSO-protect services which do not support SSO natively.
 
-See the project's [documentation](https://oauth2_proxybudget.org/docs/) to learn what OAuth2-Proxy does and why it might be useful to you.
+See the project's [documentation](https://oauth2-proxy.github.io/oauth2-proxy/) to learn what OAuth2-Proxy does and why it might be useful to you.
+
+## Operation modes
+
+OAuth2-Proxy can be used in two different modes:
+
+1. Capturing incoming traffic for the app (e.g. <https://app.example.com/>), and then proxying it to the application container if the user is authenticated
+
+2. Letting the application itself capture incoming traffic for itself (on <https://app.example.com/>) and use Traefik's [ForwardAuth](https://doc.traefik.io/traefik/middlewares/http/forwardauth/) middleware to authenticate the request via OAuth2-Proxy. In this case, OAuth2-Proxy will only handle the `/oauth2/` prefix on the application domain (e.g. <https://app.example.com/oauth2/>).
+
+The first one is a bit invasive, as it will require all custom reverse-proxying configuration for the handled domain to be moved to the OAuth2-Proxy side.
+
+The second one lets you keep the existing application configuration. However, this mode needs all URLs to go to one service (the application) with the exception of `/oauth2/` (which should go to OAuth2-Proxy). As such, it requires that both services (the application and OAuth2-Proxy) run on the same machine.
+
+Our sample configuration below uses [ForwardAuth](https://doc.traefik.io/traefik/middlewares/http/forwardauth/). While this role should be flexible enough to let you reconfigure it for both modes, we recommend using the second (ForwardAuth) method if feasible.
 
 ## Adjusting the playbook configuration
 
@@ -46,17 +60,84 @@ oauth2_proxy_enabled: true
 ########################################################################
 ```
 
-### Set the hostname
+### Sample configuration
 
-To enable OAuth2-Proxy you need to set the hostname as well. To do so, add the following configuration to your `vars.yml` file. Make sure to replace `example.com` with your own value.
+Below is a sample configuration for protecting a static website ([Hubsite](https://github.com/moan0s/hubsite) installed with [ansible-role-hubsite](https://github.com/mother-of-all-self-hosting/ansible-role-hubsite)) service with [Keycloak](https://www.keycloak.org/). For this to work as described, both OAuth2-Proxy and the protected service need to run on the same machine. Keycloak may run anywhere.
+
+>[!NOTE]
+>
+> - The configuration is specific to [providers](https://oauth2-proxy.github.io/oauth2-proxy/configuration/providers/) and also depends on which service you're SSO-protecting, on which server it runs (in relation to OAuth-Proxy), etc.
+> - You also need to have prepared Keycloak and a "Client app" for it. Please refer to the [Keycloak OIDC](https://oauth2-proxy.github.io/oauth2-proxy/configuration/providers/keycloak_oidc) documentation on configuring OAuth2-Proxy.
+
+### OAuth2-Proxy configuration
+
+To configure OAuth2-Proxy to handle the `/oauth2/` paths for Hubsite's domain, add the following configuration to your `vars.yml` file (adapt to your needs):
 
 ```yaml
-oauth2_proxy_hostname: "example.com"
+oauth2_proxy_environment_variable_provider: keycloak-oidc
+oauth2_proxy_environment_variable_provider_display_name: SSO
+
+oauth2_proxy_environment_variable_client_id: hubsite
+oauth2_proxy_environment_variable_client_secret: ''
+oauth2_proxy_environment_variable_oidc_issuer_url: https://keycloak.example.com/realms/my-realm
+oauth2_proxy_environment_variable_redirect_url: "https://{{ hubsite_hostname }}/oauth2/callback"
+
+oauth2_proxy_environment_variable_code_challenge_method: S256
+
+# Generate this with: `python3 -c 'import os,base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode())'`
+oauth2_proxy_environment_variable_cookie_secret: ''
+
+oauth2_proxy_container_labels_additional_labels_custom:
+  - traefik.http.routers.{{ oauth2_proxy_identifier }}-hubsite.rule=Host(`{{ hubsite_hostname }}`) && PathPrefix(`/oauth2/`)
+  - traefik.http.routers.{{ oauth2_proxy_identifier }}-hubsite.service={{ oauth2_proxy_identifier }}
+  - traefik.http.routers.{{ oauth2_proxy_identifier }}-hubsite.entrypoints={{ oauth2_proxy_container_labels_traefik_entrypoints }}
+  - traefik.http.routers.{{ oauth2_proxy_identifier }}-hubsite.tls={{ oauth2_proxy_container_labels_traefik_tls }}
+  - traefik.http.routers.{{ oauth2_proxy_identifier }}-hubsite.tls.certResolver={{ oauth2_proxy_container_labels_traefik_tls_certResolver }}
 ```
 
-After adjusting the hostname, make sure to adjust your DNS records to point the domain to your server.
+### Hubsite configuration adjustments
 
-**Note**: hosting OAuth2-Proxy under a subpath (by configuring the `oauth2_proxy_path_prefix` variable) does not seem to be possible due to OAuth2-Proxy's technical limitations.
+Now that OAuth2-Proxy is ready and handles the `/oauth2/` paths on the domain Hubsite is running, it is necessary to set up Traefik's [ForwardAuth](https://doc.traefik.io/traefik/middlewares/http/forwardauth/) middleware, so that all Hubsite requests will consult OAuth2-Proxy.
+
+The configuration described below is based on the official [Configuring for use with the Traefik (v2) ForwardAuth middleware](https://oauth2-proxy.github.io/oauth2-proxy/configuration/overview#configuring-for-use-with-the-traefik-v2-forwardauth-middleware) documentation of OAuth2-Proxy.
+
+```yml
+########################################################################
+#                                                                      #
+# hubsite                                                              #
+#                                                                      #
+########################################################################
+
+# Other Hubsite configuration …
+
+hubsite_container_labels_additional_labels_custom:
+  # Create a middleware which catches "unauthenticated" errors and serves the OAuth-Proxy sign in page.
+  - traefik.http.middlewares.{{ hubsite_identifier }}-oauth-errors.errors.status=401-403
+  - traefik.http.middlewares.{{ hubsite_identifier }}-oauth-errors.errors.service={{ oauth2_proxy_identifier }}
+  - traefik.http.middlewares.{{ hubsite_identifier }}-oauth-errors.errors.query=/oauth2/sign_in?rd={url}
+
+  # Create a middleware which passes each incoming request to OAuth2-Proxy,
+  # so it can decide whether it should be let through (to Hubsite) or should blocked (serving the OAuth2-Proxy sign in page).
+  - traefik.http.middlewares.{{ hubsite_identifier }}-oauth-auth.forwardAuth.address=http://{{ oauth2_proxy_identifier }}:{{ oauth2_proxy_container_process_http_port }}/oauth2/auth
+
+  - traefik.http.middlewares.{{ hubsite_identifier }}-oauth-auth.forwardAuth.trustForwardHeader=true
+
+  # Let a few HTTP headers set by OAuth2-Proxy get passed to Hubsite.
+  # Hubsite is a static website, so it cannot make use of them.
+  # Nevertheless, this is here as an example of how you can whitelist headers,
+  # so that applications which can make use of these headers can benefit from it.
+  # See more information about this in the comments for `oauth2_proxy_environment_variable_set_xauthrequest`.
+  - traefik.http.middlewares.{{ hubsite_identifier }}-oauth-auth.forwardAuth.authResponseHeaders=X-Auth-Request-Preferred-Username, X-Auth-Request-Groups
+
+  # Inject the 2 middlewares defined above into the router of the Hubsite service
+  - traefik.http.routers.{{ hubsite_identifier }}.middlewares={{ hubsite_identifier }}-oauth-errors,{{ hubsite_identifier }}-oauth-auth
+
+########################################################################
+#                                                                      #
+# /hubsite                                                             #
+#                                                                      #
+########################################################################
+```
 
 ### Extending the configuration
 
@@ -78,7 +159,7 @@ If you use the MASH playbook, the shortcut commands with the [`just` program](ht
 
 ## Usage
 
-After running the command for installation, OAuth2-Proxy becomes available at the specified hostname like `https://example.com`. To use it, open the URL on the browser and create an account.
+After running the command for installation, OAuth2-Proxy becomes available.
 
 ## Troubleshooting
 
