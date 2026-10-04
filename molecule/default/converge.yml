@@ -98,19 +98,17 @@
       ansible.builtin.systemd_service:
         daemon_reload: true
 
-    - name: Ensure OAuth2-Proxy systemd service is started
-      ansible.builtin.systemd_service:
-        name: oauth2-proxy.service
-        state: started
-
-    # `state: started` leaves an already-running service alone, so on a second
-    # converge against the same instance it would keep running the previous
-    # unit file and `verify.yml` would be probing something the role no longer
-    # generates. The role works out whether anything it manages changed;
+    # `state: started` does nothing to an already-running service, so on a
+    # second converge against the same instance it would keep running the
+    # previous unit file and `verify.yml` would be probing something the role no
+    # longer generates. The role works out whether anything it manages changed;
     # acting on that here is what a playbook's systemd service manager role
     # does, and it stays idempotent because an unchanged run computes `false`.
-    - name: Ensure OAuth2-Proxy systemd service is restarted if necessary
-      when: oauth2_proxy_restart_necessary | bool
+    #
+    # This is a single task rather than `started` followed by `restarted`: on a
+    # fresh install the latter would restart the service right after starting
+    # it, in the middle of its first-run work (database migrations, for Outline).
+    - name: Ensure OAuth2-Proxy systemd service is started, or restarted if necessary
       ansible.builtin.systemd_service:
         name: oauth2-proxy.service
-        state: restarted
+        state: "{{ 'restarted' if oauth2_proxy_restart_necessary | bool else 'started' }}"
