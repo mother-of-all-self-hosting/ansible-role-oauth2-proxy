@@ -25,9 +25,6 @@
     - name: Ensure Docker is installed for OAuth2-Proxy Molecule tests preparation
       ansible.builtin.include_role:
         name: ansible-role-docker
-      vars:
-        docker_daemon_options:
-          storage-driver: vfs
 
     - name: Ensure the OAuth2-Proxy Molecule stub directory exists
       ansible.builtin.file:
