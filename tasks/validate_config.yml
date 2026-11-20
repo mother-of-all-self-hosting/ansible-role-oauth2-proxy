@@ -24,7 +24,6 @@
   with_items:
     - oauth2_proxy_uid
     - oauth2_proxy_gid
-    - oauth2_proxy_container_network
     - oauth2_proxy_environment_variable_cookie_secret
     - oauth2_proxy_environment_variable_provider
     - oauth2_proxy_environment_variable_client_id
